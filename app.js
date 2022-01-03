@@ -25,16 +25,16 @@ const Chat = require('./schemas/Chat');
 const Room = require('./schemas/Room');
 
 dotenv.config({path:".env"});
-mongoose.connect(process.env.MONGODB_URL);
-let db = mongoose.connection;
+// mongoose.connect(process.env.MONGODB_URL);
+// let db = mongoose.connection;
 
-db.on('error', () =>{
-    console.log("DB Connection Failed!");
-});
+// db.on('error', () =>{
+//     console.log("DB Connection Failed!");
+// });
 
-db.on('open', () =>{
-    console.log("DB Connected!");
-});
+// db.on('open', () =>{
+//     console.log("DB Connected!");
+// });
 
 //접속자 카운트
 let count = 0;
