@@ -2,17 +2,13 @@ const mongoose = require('mongoose');
 const {Schema} = mongoose;
 const roomSchema = new Schema({
     chatNo:{
-        type: Number,
+        type: String,
         required: true,
+        unique: true
     },
     chatLeaderId:{
         type: String,
         required: true,
-    },
-    max:{
-        type: Number,
-        required: true,
-        default: 10,
     },
     regDate: {
         type: Date,

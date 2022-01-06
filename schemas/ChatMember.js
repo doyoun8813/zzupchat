@@ -6,28 +6,35 @@ const chatSchema = new Schema({
         required: true,
         ref: 'Room',
     },
-    chatMemberId:{
+    MemberId:{
         type: String,
         required: true,
     },
-    chatMemberName:{
+    nickname:{
         type: String,
         required: true,
     },
-    chatMemberImg:{
+    profileImg:{
         type: String,
         required: true
     },
-    msg: {
+    age:{
         type: String,
-        trim: true,
+        required: true
     },
-    time: String,
-    file: String,
-    regDate: {
-        type: Date,
-        default: Date.now(),
+    gender:{
+        type: String,
+        required: true
     },
+    enterDate: {
+        type: Date
+    },
+    outDate: {
+        type: Date
+    },
+    inOutChk:{
+        type: Boolean
+    }
 });
 
-module.exports = mongoose.model('Chat', chatSchema);
+module.exports = mongoose.model('ChatMember', chatSchema);

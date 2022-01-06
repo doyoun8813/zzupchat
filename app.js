@@ -5,7 +5,7 @@ const morgan = require('morgan');
 //express 세션 관리 미들웨어
 const session = require('express-session');
 //시간 표시 lib
-const moment = require("moment");
+const moment = require('moment');
 //몽고DB Driver 모듈
 const mongoose = require('mongoose');
 //노드의 환경변수 설정
@@ -26,56 +26,130 @@ const io = require('socket.io')(server,{
 
 const Chat = require('./schemas/Chat');
 const Room = require('./schemas/Room');
+const ChatMember = require('./schemas/ChatMember');
 
-dotenv.config({path:".env"});
+dotenv.config({path:'.env'});
 mongoose.connect(process.env.MONGODB_URL);
 let db = mongoose.connection;
 
 db.on('error', () =>{
-    console.log("DB Connection Failed!");
+    console.log('DB Connection Failed!');
 });
 
 db.on('open', () =>{
-    console.log("DB Connected!");
+    console.log('DB Connected!');
 });
 
 //접속자 카운트
 let count = 0;
 let user_id = 0;
-let user_name = "";
+let user_name = '';
 let All_USER = [];
 
 //소켓에 접속하면..
 io.on('connection', socket => {
-    count++;
-    user_id++;
-    console.log("NEW USER CONNECT ("+user_id+")");
-    All_USER.push({"user_id":user_id, "user_name":""});  
+    // count++;
+    // user_id++;
+    console.log('NEW USER CONNECT ("'+user_id+'")');
+    // All_USER.push({'user_id':user_id, 'user_name':''});
+
+    // 새로운 유저가 접속했을 경우 다른 소켓에 알려줌
+    socket.on('new_user', data => {
+        count++;
+        console.log(data);
+        console.log(data.nickname + ' 님이 접속하였습니다.');
+
+        if(count == 1){
+            console.log("방장이 들어왔다.");
+            const room = new Room({
+                chatNo: data.chatNo,
+                chatLeaderId: data.memberId
+            });
+
+            room.save(function(err, data){
+                if(err){
+                    console.log("error");
+                }
+                console.log("채팅방 저장");
+            });
+        }
+
+        socket.nickname = data.nickname;
+
+        io.emit('update',{
+            type: 'connect',
+            msgType: 'system',
+            message: data.nickname + '님이 접속하였습니다.'
+        });
+    });
+
+    // 전송한 메세지 받기
+    socket.on('message', data => {
+        data.nickname = socket.nickname
+        
+        console.log(data);
+
+        socket.broadcast.emit('update', data);
+    });
+
+    socket.on('send_msg', data => {
+        //const { room, name, msg } = data;
+        const {
+            type, msgType, message, memberInfo 
+        } = data;
+        console.log(data);
+
+        // const newChat = new ChatTest(data);
+        // newChat.save();
+
+        const chat = new Chat({
+            chatNo: data.memberInfo.chatNo,
+            chatMemberId: data.memberInfo.memberId,
+            chatMemberName: data.memberInfo.nickname,
+            chatMemberImg: data.memberInfo.profileImage,
+            msg: data.message
+
+        });
+
+        chat.save(function(err, data){
+            if(err){
+                console.log("error");
+            }
+            console.log("채팅 내용 저장");
+        });
+
+        io.emit('send_msg', {
+            message,
+            memberInfo,
+            regDate: moment(new Date()).format("MM-DD h:mm A")
+        });
+    });
+
 
     //클라이언트에서 접속시 보내는 name 정보 받음
-    socket.on('name', (data) => {
-        const name = data;
-        user_name = data;
-        console.log(user_name+"님이 입장하셨습니다.");
+    // socket.on('name', (data) => {
+    //     const name = data;
+    //     user_name = data;
+    //     console.log(user_name+"님이 입장하셨습니다.");
 
-        //다시 클라이언트로 보냄
-        io.emit('send_user_id',{
-            user_name,
-            user_id
-        });
-    });
+    //     //다시 클라이언트로 보냄
+    //     io.emit('send_user_id',{
+    //         user_name,
+    //         user_id
+    //     });
+    // });
 
-    socket.on('connect_name', (data) => {
-        const { name, user_id } = data;
-        console.log(data);
-        All_USER.forEach(function(element, index){
-            if(element.user_id == data.user_id){
-                element.user_name = data.name;
-            }
-        });
-        console.log(All_USER);
-        sendAllUsers();
-    });
+    // socket.on('connect_name', (data) => {
+    //     const { name, user_id } = data;
+    //     console.log(data);
+    //     All_USER.forEach(function(element, index){
+    //         if(element.user_id == data.user_id){
+    //             element.user_name = data.name;
+    //         }
+    //     });
+    //     console.log(All_USER);
+    //     sendAllUsers();
+    // });
 
     //전체 사용자 정보 보냄
     function sendAllUsers(){
@@ -85,30 +159,37 @@ io.on('connection', socket => {
     }    
 
     //console.log(user_id+'님이 입장하셨습니다.', socket.id);
-    console.log("현재 접속자수 : " + count);
+    //console.log("현재 접속자수 : " + count);
 
+    // 접속 종료시
     socket.on('disconnect', () => {
-        count--;
-        user_id--;
-        console.log(user_id+'님이 퇴장하셨습니다. ::', socket.id);
-        console.log("현재 접속자수 : " + count);
-        All_USER.splice(user_id-1,1);
-        console.log("out All_USER : " + JSON.stringify(All_USER));
-    });
+        // count--;
+        // user_id--;
+        // console.log(user_id+'님이 퇴장하셨습니다. ::', socket.id);
+        // console.log("현재 접속자수 : " + count);
+        // All_USER.splice(user_id-1,1);
+        // console.log("out All_USER : " + JSON.stringify(All_USER));
 
-    socket.on('send_msg', (data) => {
-        const { room, name, msg } = data;
-        console.log(data);
-
-        // const newChat = new ChatTest(data);
-        // newChat.save();
-
-        io.emit('send_msg', {
-            name,
-            msg,
-            time: moment(new Date()).format("h:mm A")
+        socket.broadcast.emit('update', {
+            type: 'disconnect',
+            name: 'SERVER',
+            message: socket.nickname + '님이 나가셨습니다.'
         });
     });
+
+    // socket.on('send_msg', (data) => {
+    //     const { room, name, msg } = data;
+    //     console.log(data);
+
+    //     // const newChat = new ChatTest(data);
+    //     // newChat.save();
+
+    //     io.emit('send_msg', {
+    //         name,
+    //         msg,
+    //         time: moment(new Date()).format("h:mm A")
+    //     });
+    // });
 });
 
 
