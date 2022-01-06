@@ -11,16 +11,19 @@ const mongoose = require('mongoose');
 //노드의 환경변수 설정
 const dotenv = require('dotenv');
 //localhost 다른 클라이언트에서 접속했을때 오류나는거 해결해주는 애
-
+const cors = require('cors');
+//express 객체 생성
 const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http,{
+//express http 서버 생성
+const server = require('http').createServer(app);
+//생성된 서버를 socket.io에 바인딩
+const io = require('socket.io')(server,{
     cors:{
         origin: "*",
         method: ["GET", "POST"]
     }
 });
-const cors = require('cors');
+
 const Chat = require('./schemas/Chat');
 const Room = require('./schemas/Room');
 
@@ -97,8 +100,8 @@ io.on('connection', socket => {
         const { room, name, msg } = data;
         console.log(data);
 
-        const newChat = new ChatTest(data);
-        newChat.save();
+        // const newChat = new ChatTest(data);
+        // newChat.save();
 
         io.emit('send_msg', {
             name,
@@ -110,13 +113,13 @@ io.on('connection', socket => {
 
 
 
-//페이지를 get으로 요청 했을 때
+//서버 페이지를 get방식, /경로로 요청 했을 때(기본 첫 페이지)
 app.get('/', (req, res) => {
     res.send('Hello Express');
 });
 
-//http는 3000번 포트를 사용한다.
-http.listen(3000, () => {
+//server는 listen 메서드 통해 3000번 포트를 사용한다.
+server.listen(3000, () => {
     //콘솔창에 출력
     console.log('listening on *:3000');
 });
