@@ -79,7 +79,9 @@ io.on('connection', socket => {
         io.emit('update',{
             type: 'connect',
             msgType: 'system',
-            message: data.nickname + '님이 접속하였습니다.'
+            message: data.nickname + '님이 접속하였습니다.',
+            memberId: data.memberId
+
         });
     });
 
