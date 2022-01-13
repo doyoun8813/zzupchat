@@ -53,7 +53,7 @@ io.on('connection', socket => {
     // 새로운 유저가 접속했을 경우 다른 소켓에 알려줌
     socket.on('new_user', data => {
         console.log(data);
-        console.log(data.chatNo + '번 방에 ' + data.nickname + ' 님이 접속하였습니다.');
+        console.log(data.nickname + ' 님이 접속하였습니다.');
 
         socket.nickname = data.nickname;
         socket.chatLeaderId = data.chatLeaderId;
@@ -65,7 +65,7 @@ io.on('connection', socket => {
             type: 'connect',
             msgType: 'system',
             chatNo : data.chatNo,
-            message: data.chatNo + "번 방에 " + data.nickname + '님이 접속하였습니다.',
+            message: data.nickname + '님이 접속하였습니다.',
             memberId: data.memberId
         });
     });
@@ -110,45 +110,34 @@ io.on('connection', socket => {
         });
     });
 
-    socket.on('connect_user', (data) => {
-        const { name, user_id } = data;
-        console.log(data);
-        ON_USER.forEach(function(element, index){
-            if(element.user_id == data.user_id){
-                element.user_name = data.name;
-            }
-        });
-        console.log(user_arr);
-        sendOnUsers();
-    });
-
-    //전체 사용자 정보 보냄
-    function sendOnUsers(){
-
-        user_arr.forEach(function(element, index){
-            socket.emit('on_users', user_arr);
-        });
-    }
-
     socket.on('bomb_msg', data => {
-        console.log("폭파?");
+        //console.log("폭파?");
         console.log(data.chatNo);
         io.emit('bomb_msg', {
             chatNo : data.chatNo
         });
     });
 
+    socket.on('get_out_msg', data => {
+        //console.log("강퇴?");
+        //console.log(data);
+        io.emit('get_out_msg', {
+            chatNo : data.memberInfo.chatNo,
+            getOutId : data.getOutId
+        });
+    });
+
     //접속 종료시
     socket.on('disconnect', () => {
 
-        console.log(socket.chatNo + '번 방에' + socket.memberId+'님이 접속을 종료하였습니다::');
+        console.log(socket.memberId+'님이 접속을 종료하였습니다::');
 
         socket.broadcast.emit('update', {
             type: 'disconnect',
             name: 'SERVER',
             chatNo : socket.chatNo,
             memberId : socket.memberId,
-            message: socket.chatNo + '번 방에' + socket.nickname + '님이 접속을 종료하였습니다.'
+            message: socket.nickname + '님이 접속을 종료하였습니다.'
         });
 
         io.emit('on_users', user_arr);
