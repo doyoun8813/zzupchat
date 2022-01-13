@@ -41,85 +41,68 @@ db.on('open', () =>{
 });
 
 //접속자 카운트
-let count = 0;
-let user_id = 0;
+let user_id = '';
 let user_name = '';
-let All_USER = [];
+let user_obj = {};
+let user_arr = [];
 
 //소켓에 접속하면..
 io.on('connection', socket => {
-    // count++;
-    // user_id++;
-    console.log('NEW USER CONNECT ("'+user_id+'")');
-    // All_USER.push({'user_id':user_id, 'user_name':''});
+    console.log('NEW USER CONNECT');
 
     // 새로운 유저가 접속했을 경우 다른 소켓에 알려줌
     socket.on('new_user', data => {
-        count++;
         console.log(data);
-        console.log(data.nickname + ' 님이 접속하였습니다.');
-
-        if(count == 1){
-            console.log("방장이 들어왔다.");
-            const room = new Room({
-                chatNo: data.chatNo,
-                chatLeaderId: data.memberId
-            });
-
-            room.save(function(err, data){
-                if(err){
-                    console.log("error");
-                }
-                console.log("채팅방 저장");
-            });
-        }
+        console.log(data.chatNo + '번 방에 ' + data.nickname + ' 님이 접속하였습니다.');
 
         socket.nickname = data.nickname;
+        socket.chatLeaderId = data.chatLeaderId;
+        socket.memberId = data.memberId;
+        socket.chatNo = data.chatNo;
 
+        // 클라이언트에 접속정보 보내기
         io.emit('update',{
             type: 'connect',
             msgType: 'system',
-            message: data.nickname + '님이 접속하였습니다.',
+            chatNo : data.chatNo,
+            message: data.chatNo + "번 방에 " + data.nickname + '님이 접속하였습니다.',
             memberId: data.memberId
-
         });
     });
 
-    // 전송한 메세지 받기
+    // 클라이언트가 전송한 메세지 받기
     socket.on('message', data => {
-        data.nickname = socket.nickname
-        
+        console.log("=====클라이언트가 전송한 메세지 데이터====");
         console.log(data);
-
+        data.nickname = socket.nickname
+        //자신을 제외한 접속자에게 데이터 보내기
         socket.broadcast.emit('update', data);
     });
 
     socket.on('send_msg', data => {
-        //const { room, name, msg } = data;
         const {
             type, msgType, message, memberInfo 
         } = data;
         console.log(data);
 
-        // const newChat = new ChatTest(data);
-        // newChat.save();
-
+        //메세지 데이터 몽고디비 저장
         const chat = new Chat({
             chatNo: data.memberInfo.chatNo,
             chatMemberId: data.memberInfo.memberId,
             chatMemberName: data.memberInfo.nickname,
             chatMemberImg: data.memberInfo.profileImage,
             msg: data.message
-
         });
 
         chat.save(function(err, data){
             if(err){
                 console.log("error");
+            }else{
+                console.log("채팅 내용 저장");
             }
-            console.log("채팅 내용 저장");
         });
 
+        //받은 메세지 모든 접속자에게 뿌려줌
         io.emit('send_msg', {
             message,
             memberInfo,
@@ -127,74 +110,50 @@ io.on('connection', socket => {
         });
     });
 
-
-    //클라이언트에서 접속시 보내는 name 정보 받음
-    // socket.on('name', (data) => {
-    //     const name = data;
-    //     user_name = data;
-    //     console.log(user_name+"님이 입장하셨습니다.");
-
-    //     //다시 클라이언트로 보냄
-    //     io.emit('send_user_id',{
-    //         user_name,
-    //         user_id
-    //     });
-    // });
-
-    // socket.on('connect_name', (data) => {
-    //     const { name, user_id } = data;
-    //     console.log(data);
-    //     All_USER.forEach(function(element, index){
-    //         if(element.user_id == data.user_id){
-    //             element.user_name = data.name;
-    //         }
-    //     });
-    //     console.log(All_USER);
-    //     sendAllUsers();
-    // });
+    socket.on('connect_user', (data) => {
+        const { name, user_id } = data;
+        console.log(data);
+        ON_USER.forEach(function(element, index){
+            if(element.user_id == data.user_id){
+                element.user_name = data.name;
+            }
+        });
+        console.log(user_arr);
+        sendOnUsers();
+    });
 
     //전체 사용자 정보 보냄
-    function sendAllUsers(){
-        All_USER.forEach(function(element, index){
-            socket.emit('all_users', All_USER);
+    function sendOnUsers(){
+
+        user_arr.forEach(function(element, index){
+            socket.emit('on_users', user_arr);
         });
-    }    
+    }
 
-    //console.log(user_id+'님이 입장하셨습니다.', socket.id);
-    //console.log("현재 접속자수 : " + count);
+    socket.on('bomb_msg', data => {
+        console.log("폭파?");
+        console.log(data.chatNo);
+        io.emit('bomb_msg', {
+            chatNo : data.chatNo
+        });
+    });
 
-    // 접속 종료시
+    //접속 종료시
     socket.on('disconnect', () => {
-        // count--;
-        // user_id--;
-        // console.log(user_id+'님이 퇴장하셨습니다. ::', socket.id);
-        // console.log("현재 접속자수 : " + count);
-        // All_USER.splice(user_id-1,1);
-        // console.log("out All_USER : " + JSON.stringify(All_USER));
+
+        console.log(socket.chatNo + '번 방에' + socket.memberId+'님이 접속을 종료하였습니다::');
 
         socket.broadcast.emit('update', {
             type: 'disconnect',
             name: 'SERVER',
-            message: socket.nickname + '님이 나가셨습니다.'
+            chatNo : socket.chatNo,
+            memberId : socket.memberId,
+            message: socket.chatNo + '번 방에' + socket.nickname + '님이 접속을 종료하였습니다.'
         });
+
+        io.emit('on_users', user_arr);
     });
-
-    // socket.on('send_msg', (data) => {
-    //     const { room, name, msg } = data;
-    //     console.log(data);
-
-    //     // const newChat = new ChatTest(data);
-    //     // newChat.save();
-
-    //     io.emit('send_msg', {
-    //         name,
-    //         msg,
-    //         time: moment(new Date()).format("h:mm A")
-    //     });
-    // });
 });
-
-
 
 //서버 페이지를 get방식, /경로로 요청 했을 때(기본 첫 페이지)
 app.get('/', (req, res) => {
