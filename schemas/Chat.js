@@ -26,7 +26,7 @@ const chatSchema = new Schema({
     file: String,
     regDate: {
         type: Date,
-        default: Date.now(),
+        default: Date.now,
     },
 });
 
