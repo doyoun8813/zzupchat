@@ -110,6 +110,37 @@ io.on('connection', socket => {
         });
     });
 
+    socket.on('send_img', data => {
+        const {
+            type, msgType, message, memberInfo 
+        } = data;
+        console.log(data);
+
+        //메세지 데이터 몽고디비 저장
+        const chat = new Chat({
+            chatNo: data.memberInfo.chatNo,
+            chatMemberId: data.memberInfo.memberId,
+            chatMemberName: data.memberInfo.nickname,
+            chatMemberImg: data.memberInfo.profileImage,
+            msg: data.message
+        });
+
+        chat.save(function(err, data){
+            if(err){
+                console.log("error");
+            }else{
+                console.log("채팅 내용 저장");
+            }
+        });
+
+        //받은 메세지 모든 접속자에게 뿌려줌
+        io.emit('send_img', {
+            message,
+            memberInfo,
+            regDate: moment(new Date()).format("MM-DD h:mm A")
+        });
+    });
+
     socket.on('bomb_msg', data => {
         //console.log("폭파?");
         console.log(data.chatNo);
