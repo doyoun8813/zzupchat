@@ -22,6 +22,9 @@ const chatSchema = new Schema({
         type: String,
         trim: true,
     },
+    msgType:{
+        type: String,
+    },
     time: String,
     file: String,
     regDate: {

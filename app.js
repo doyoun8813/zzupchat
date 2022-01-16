@@ -53,20 +53,104 @@ io.on('connection', socket => {
     // 새로운 유저가 접속했을 경우 다른 소켓에 알려줌
     socket.on('new_user', data => {
         console.log(data);
-        console.log(data.nickname + ' 님이 접속하였습니다.');
+        console.log(data.memberInfo.nickname + ' 님이 접속하였습니다.');
 
-        socket.nickname = data.nickname;
-        socket.chatLeaderId = data.chatLeaderId;
-        socket.memberId = data.memberId;
-        socket.chatNo = data.chatNo;
+        socket.nickname = data.memberInfo.nickname;
+        socket.chatLeaderId = data.memberInfo.chatLeaderId;
+        socket.memberId = data.memberInfo.memberId;
+        socket.chatNo = data.memberInfo.chatNo;
+
+        //메세지 데이터 몽고디비 저장
+        const chat = new Chat({
+            chatNo: data.memberInfo.chatNo,
+            chatMemberId: data.memberInfo.memberId,
+            chatMemberName: data.memberInfo.nickname,
+            chatMemberImg: data.memberInfo.profileImage,
+            msg: data.memberInfo.nickname + ' 님이 접속하였습니다.',
+            msgType: 'system'
+        });
+
+        chat.save(function(err, data){
+            if(err){
+                console.log("error");
+            }else{
+                console.log("채팅 내용 저장");
+            }
+        });
 
         // 클라이언트에 접속정보 보내기
         io.emit('update',{
             type: 'connect',
             msgType: 'system',
-            chatNo : data.chatNo,
-            message: data.nickname + '님이 접속하였습니다.',
-            memberId: data.memberId
+            chatNo : data.memberInfo.chatNo,
+            message: data.memberInfo.nickname + '님이 접속하였습니다.',
+            memberId: data.memberInfo.memberId
+        });
+    });
+
+    // 모임참여 체크했으면 다른 소켓에 알려줌
+    socket.on('ready_check_on', data => {
+        console.log(data);
+        console.log(data.memberInfo.nickname + ' 님이 모임에 참가 하였습니다.');
+
+        //메세지 데이터 몽고디비 저장
+        const chat = new Chat({
+            chatNo: data.memberInfo.chatNo,
+            chatMemberId: data.memberInfo.memberId,
+            chatMemberName: data.memberInfo.nickname,
+            chatMemberImg: data.memberInfo.profileImage,
+            msg: data.memberInfo.nickname + ' 님이 모임에 참가 하였습니다.',
+            msgType: 'system'
+        });
+
+        chat.save(function(err, data){
+            if(err){
+                console.log("error");
+            }else{
+                console.log("채팅 내용 저장");
+            }
+        });
+
+        // 클라이언트에 모임참여 참가자 정보 보내기
+        io.emit('update',{
+            type: 'ready_check',
+            msgType: 'system',
+            chatNo : data.memberInfo.chatNo,
+            message : data.memberInfo.nickname + '님이 모임에 참가 하였습니다.',
+            memberId : data.memberInfo.memberId
+        });
+    });
+
+    // 모임참여 체크 해제했으면 다른 소켓에 알려줌
+    socket.on('ready_check_off', data => {
+        console.log(data);
+        console.log(data.memberInfo.nickname + ' 님이 모임에 참가를 해제 하였습니다.');
+
+        //메세지 데이터 몽고디비 저장
+        const chat = new Chat({
+            chatNo: data.memberInfo.chatNo,
+            chatMemberId: data.memberInfo.memberId,
+            chatMemberName: data.memberInfo.nickname,
+            chatMemberImg: data.memberInfo.profileImage,
+            msg: data.memberInfo.nickname + ' 님이 모임에 참가를 해제 하였습니다.',
+            msgType: 'system'
+        });
+
+        chat.save(function(err, data){
+            if(err){
+                console.log("error");
+            }else{
+                console.log("채팅 내용 저장");
+            }
+        });
+
+        // 클라이언트에 모임참여 참가자 정보 보내기
+        io.emit('update',{
+            type: 'ready_check',
+            msgType: 'system',
+            chatNo : data.memberInfo.chatNo,
+            message : data.memberInfo.nickname + '님이 모임에 참가를 해제 하였습니다.',
+            memberId : data.memberInfo.memberId
         });
     });
 
@@ -74,7 +158,7 @@ io.on('connection', socket => {
     socket.on('message', data => {
         console.log("=====클라이언트가 전송한 메세지 데이터====");
         console.log(data);
-        data.nickname = socket.nickname
+        data.nickname = socket.memberInfo.nickname
         //자신을 제외한 접속자에게 데이터 보내기
         socket.broadcast.emit('update', data);
     });
@@ -91,7 +175,8 @@ io.on('connection', socket => {
             chatMemberId: data.memberInfo.memberId,
             chatMemberName: data.memberInfo.nickname,
             chatMemberImg: data.memberInfo.profileImage,
-            msg: data.message
+            msg: data.message,
+            msgType: data.msgType
         });
 
         chat.save(function(err, data){
